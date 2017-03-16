@@ -151,8 +151,13 @@ mkdir -p "$DONE_DIR"
 
 
 #
-# Export variables so other scripts can use them
+# Prepare and export variables so other scripts can use them
 #
+
+CONFIG_DIR=`realpath "$CONFIG_DIR"`
+PROFILE_DIR=`realpath "$PROFILE_DIR"`
+SHARED_FILES=`realpath "$SHARED_FILES"`
+DONE_DIR=`realpath "$DONE_DIR"`
 
 export -f exit_on_fail
 export SCRIPT_VER=1
@@ -180,11 +185,14 @@ echo
 echo
 
 # Run all scripts for given profile
+
+current_dir=`pwd`
 for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
   BASENM=`basename "$script"`
   if [ "$BASENM" == "00-prelims.sh" -o ! -e "$DONE_DIR/$BASENM" ]; then
     echo "Running $PROFILE/$BASENM...."
     . "$script"
+    cd "$current_dir"
     echo "Done."
     echo
     touch "$DONE_DIR/$BASENM"
