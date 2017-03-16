@@ -1,0 +1,16 @@
+# Migrate Me
+
+*A simple script-based migration utility for *nix systems*
+
+Migrate Me is a simple utility designed to allow users to establish potentially complex system configurations using just shell scripts. The shells scripts are named arbitrarily and stored in profile directories. There are no intended limitations on what they can do, though the recommendation is that they maintain remain discrete units that can be rerun without damage.
+
+Once each script finishes successfully, a file named after the script is stored in `~/.config/migrate-me/[profile]/`. On future runs, only scripts that are not recorded in this way will run, allowing the migration to pick up where it left off in case of errors.
+
+## Profiles
+
+The script is expected to be run with a specified profile, for example, `./migrate-me.sh personal-computer`. If it's run without a profile specified (i.e., `./migrate-me.sh`), it will attempt to find a default profile at `[migrate-me-root]/profiles/default`. If you'd like, you can symlink `default` to your normal profile so that you can run the script frequently without specifying a profile (though I don't know why you would run it frequently).
+
+The project has been created so that you can maintain a separate git repo of your profiles. Thus, the required `profile` folder is missing, and instead there is a `profile.example` folder to provide an example of what a typical profile setup looks like.
+
+You can either create an unmanaged set of profiles by just creating a `profiles` folder and creating subprofiles under it for your profiles, or you can create a git repo of your profiles and clone it at `profiles`. Either way works fine.
+
