@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export SCRIPT_VER=2.1
 
 #
 # Functions
@@ -27,7 +28,7 @@ function exit_on_fail {
 function echo_usage {
   echo "$0 - migrate a system setup to a new system"
   echo
-  echo "$0 [options] [profile]"
+  echo "$0 [options] profile"
   echo
   echo "Options:"
   echo "  -h, --help                      show this help"
@@ -74,9 +75,20 @@ while test $# -gt 0; do
       fi
       ;;
 
+    -v|--version)
+      echo "$0 version $SCRIPT_VER"
+      echo
+      exit 0
+      ;;
+
     *)
+      if [ "${1:0:1}" == "-" ]; then
+        echo 'Argument `'"$1"'` unknown!'
+        echo_usage
+        exit 1
+      fi
       if [ "$PROFILE" != "" ]; then
-        echo "You have unknown arguments!"
+        echo "You've passed two arguments that look like profiles. Please fix this. ('$PROFILE' and '$1')"
         echo_usage
         exit 1
       fi
@@ -162,7 +174,6 @@ SHARED_FILES=`realpath "$SHARED_FILES"`
 DONE_DIR=`realpath "$DONE_DIR"`
 
 export -f exit_on_fail
-export SCRIPT_VER=1
 export CONFIG_DIR
 export PROFILE_DIR
 export PROFILE
