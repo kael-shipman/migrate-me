@@ -7,14 +7,16 @@
 
 function exit_on_fail {
   if [[ ! "$1" =~ ^[0-9]+$ ]]; then
-    echo "Error: Received text instead of number for first argument. (Fail message: $1)" >&2
+    echo "Error: Received text instead of number for first argument." >&2
+    echo "  (Arg 1: $1)" >&2
+    echo "  (Arg 2: $2)" >&2
     echo >&2
     echo "Intended usage:" >&2
     echo >&2
-    echo '  exit_on_fail $(your-command-here --your-argument=1 -o && echo $?) '"'"'Put your failure message here'"'" >&2
+    echo '  ' >&2
+    echo '  exit_on_fail $(your-command-here --your-argument=1 -oh; echo "$?") '"'"'Put your failure message here'"'" >&2
     echo >&2
-    echo 'Note that the "&& echo $?" part is crucial, as this returns the exit code of your command to the exit_on_fail function' >&2
-    echo >&2
+    echo 'NOTE: The `echo "$?"` part is crucial, as this returns the exit code of your command to the function, telling it whether or not the command was a success' &>2
     exit 2
   elif [ "$1" -gt 0 ]; then
     echo "$2" >&2
@@ -175,7 +177,7 @@ echo "**************************************************"
 echo "-- Welcome to the New System Migration console! --"
 echo "**************************************************"
 echo
-echo ":: Using profile '$PROFILE'."
+echo ":: Using profile '$PROFILE' ::"
 echo
 
 
