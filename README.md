@@ -22,6 +22,20 @@ The script is expected to be run with a specified profile, for example, `migrate
 
 The project has been created so that you can maintain a separate git repo of your profiles. See below for how to point the script to your profiles.
 
+### Special Hooks
+
+There are two special setup and teardown "hook" scripts that are intended to before and after all other scripts, respectively. These are `00-prelims.sh` and `99-cleanup.sh`. You can include one, both, or neither -- it makes no difference. The `00-prelims.sh` script is useful for establishing configuration across all of the subsequent scripts. For example, you might create some functions and/or variables that all your scripts can access:
+
+```bash
+#!/bin/bash
+
+export SERVER_NAME="test-server"
+export WEB_DIR="/srv/www"
+#...
+```
+
+The `99-cleanup.sh` script is intended to do what it says, and probably won't be used much, since there probably won't be much to cleanup.
+
 ## Default Folders and Options to Override Them
 
 There are four important directories that determine how `migrate-me` works. Two of them -- `$CONFIG_DIR` and `$PROFILE_DIR` can be overridden with command-line options.

@@ -56,7 +56,7 @@ while test $# -gt 0; do
     -c|--config-dir)
       shift
       if test $# -gt 0; then
-        CONFIG_DIR="$1"
+        CONFIG_DIR=`realpath "$1"`
         shift
       else
         echo "No config directory specified, even though -c or --config-dir parameter passed!"
@@ -67,7 +67,7 @@ while test $# -gt 0; do
     -p|--profile-dir)
       shift
       if test $# -gt 0; then
-        PROFILE_DIR="$1"
+        PROFILE_DIR=`realpath "$1"`
         shift
       else
         echo "No profile directory specified, even though -p or --profile-dir parameter passed!"
@@ -107,10 +107,10 @@ done
 #
 
 if [ "$CONFIG_DIR" == "" ]; then
-  CONFIG_DIR=~/.config/migrate-me
+  CONFIG_DIR=`realpath ~/.config/migrate-me`
 fi
 if [ "$PROFILE_DIR" == "" ]; then
-  PROFILE_DIR="profiles"
+  PROFILE_DIR="$CONFIG_DIR/profiles"
   DEFAULT_PRF_DIR=1
 else
   DEFAULT_PRF_DIR=0
@@ -126,13 +126,12 @@ if [ ! -d "$CONFIG_DIR" ]; then
   fi
 fi
 if [ "$DEFAULT_PRF_DIR" -eq 1 ]; then
-  PROFILE_DIR="$CONFIG_DIR/$PROFILE_DIR"
-  if [ ! -d "$CONFIG_DIR/$PROFILE_DIR" ]; then
+  if [ ! -d "$PROFILE_DIR" ]; then
     mkdir -p "$PROFILE_DIR"
   fi
 else
   if [ ! -d "$PROFILE_DIR" ]; then
-    read -n 1 -p "Profile dir '$PROFILE_DIR' is neither an existing standalone folder nor a subfolder of the config dir ($CONFIG_DIR). Would you like to create it? [Y,n] " ANS
+    read -n 1 -p "Profile dir '$PROFILE_DIR' doesn't exist. Would you like to create it? [Y,n] " ANS
     if [ "$ANS" != 'N' -a "$ANS" != 'n' ]; then
       mkdir -p "$PROFILE_DIR"
     else
@@ -202,7 +201,7 @@ echo
 current_dir=`pwd`
 for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
   BASENM=`basename "$script"`
-  if [ "$BASENM" == "00-prelims.sh" -o ! -e "$DONE_DIR/$BASENM" ]; then
+  if [ "$BASENM" == "00-prelims.sh" -o "$BASENM" == "99-cleanup.sh" -o ! -e "$DONE_DIR/$BASENM" ]; then
     echo "Running $PROFILE/$BASENM...."
     . "$script"
     cd "$current_dir"
