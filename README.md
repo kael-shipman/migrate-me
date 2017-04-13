@@ -8,9 +8,9 @@ Once each script finishes successfully, a file named after the script is stored 
 
 ## Installation
 
-To install, just symlink `migrate-me.sh` to any of your `bin` directories (e.g., `/usr/local/bin/` or `/usr/bin/`). You can then call it from anywhere by simply typing `migrate-me.sh`.
+To install, simply download the [migrate-me.sh](https://github.com/kael-shipman/migrate-me/raw/master/migrate-me.sh) file and place it in your `PATH`. 
 
-Of course, you can also use it locally by entering the migrate-me folder and typing `./migrate-me.sh`.
+If you'd like to easily keep up with updates, you can clone this git repo and symlink the `migrate-me.sh` into your PATH. Optionally, you can `git checkout [tag]` in your repo clone to use a specific version.
 
 On first run, it will ask you if you want to create the config directory (you should choose yes, or choose no and specify a different config directory using the command line options detailed below).
 
