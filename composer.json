@@ -1,0 +1,24 @@
+{
+    "name": "kael-shipman/migrate-me",
+    "description": "A simple, bash-based machine migration framework",
+    "type": "project",
+    "keywords": [ "migration", "bash" ],
+    "license": "GPL-3.0",
+    "authors": [
+        {
+            "name": "Kael Shipman",
+            "email": "kael.shipman@gmail.com",
+            "homepage": "https://colors.kaelshipman.me",
+            "role": "author"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/kael-shipman/migrate-me/issues",
+        "source": "https://github.com/kael-shipman/migrate-me",
+        "docs": "https://github.com/kael-shipman/migrate-me"
+    },
+    "bin": [
+        "migrate-me.sh"
+    ]
+}
+
