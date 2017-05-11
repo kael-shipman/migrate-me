@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export SCRIPT_VER=2.1
+export SCRIPT_VER=2.2
 
 #
 # Functions
@@ -37,6 +37,74 @@ function echo_usage {
   echo
   echo
 }
+
+function is_array {
+    if [ `declare -p $1 2> /dev/null | grep -q '^declare \-a'; echo $?` -eq 0 ]; then
+        echo 1
+    else
+        echo 2
+    fi
+}
+
+function dump_array_vals {
+    array="${1}[@]"
+    vals=''
+    n=0 
+    for x in ${!array}; do
+        if [ $n -eq 0 ]; then vals='"'$x'"'
+        else vals=$vals' "'$x'"'
+        fi  
+        n=$(($n + 1))
+    done
+    echo $vals
+}
+
+function save_usrvar {
+    if [ "$1" == "" ]; then
+        echo "You must supply a variable name for the first parameter of 'save_usrvar'!"
+        exit 1
+    fi
+    if [ "${!1}" == "" ]; then
+        echo "The variable you're saving with 'save_usrvar' must have a value!"
+        exit 1
+    fi
+    if [ "$USRVARS" == "" ] || [ ! -d `dirname $USRVARS` ]; then
+        echo
+        echo "'USRVARS' is not set to a valid file! This is usually set in"
+        echo "[cfx-server-admin]/shared-files/scripts/00-global-prelim.sh, so"
+        echo "it's strange that it is no longer set.... Please look into this."
+        echo
+        exit 1
+    fi
+
+    if [ ! -f "$USRVARS" ]; then
+        touch "$USRVARS"
+    fi
+
+    # If the variable hasn't already been set, set it
+    if [ `cat "$USRVARS" | grep -c "^$1="` -eq 0 ] && [ `cat "$USRVARS" | grep -c "^declare -a $1="` -eq 0 ]; then
+        if [ `is_array $1` -eq 1 ]; then
+            echo "declare -a $1=(`dump_array_vals $1`)" >> $USRVARS
+        else
+            echo "$1="'"'"${!1}"'"' >> $USRVARS
+        fi  
+
+    # Otherwise, change its value
+    else
+        if [ `is_array $1` -eq 1 ]; then
+            repl=`echo $(dump_array_vals $1) | sed -e 's/[]\\/$*.^|[]/\\\\&/g'`
+            sed -i -E "s/^declare -a $1=.+$/declare -a $1=($repl)/" $USRVARS
+        else
+            repl=`echo ${!1} | sed -e 's/[]\\/$*.^|[]/\\\\&/g'`
+            sed -i -E "s/^$1=.+$/$1="'"'"$repl"'"'"/" $USRVARS
+        fi
+    fi
+}
+
+
+
+
+
 
 
 
@@ -107,7 +175,7 @@ done
 #
 
 if [ "$CONFIG_DIR" == "" ]; then
-  CONFIG_DIR=`realpath ~/.config/migrate-me`
+  CONFIG_DIR=`realpath /etc/migrate-me`
 fi
 if [ "$PROFILE_DIR" == "" ]; then
   PROFILE_DIR="$CONFIG_DIR/profiles"
@@ -115,22 +183,32 @@ if [ "$PROFILE_DIR" == "" ]; then
 else
   DEFAULT_PRF_DIR=0
 fi
-if [ ! -d "$CONFIG_DIR" ]; then
+while [ ! -d "$CONFIG_DIR" ]; do
   read -n 1 -p "Config dir '$CONFIG_DIR' doesn't exist. Would you like to create it? [Y,n] " ANS
   if [ "$ANS" != 'N' -a "$ANS" != 'n' ]; then
-    mkdir -p "$CONFIG_DIR"
+    mkdir -p "$CONFIG_DIR" 2>/dev/null
+    if [ "$?" -gt 0 ]; then
+        sudo mkdir -p "$CONFIG_DIR"
+    fi
   else
     echo
     echo "Need a valid config directory to proceed"
     exit 1
   fi
-fi
+done
 if [ "$DEFAULT_PRF_DIR" -eq 1 ]; then
   if [ ! -d "$PROFILE_DIR" ]; then
-    mkdir -p "$PROFILE_DIR"
+    mkdir -p "$PROFILE_DIR" 2>/dev/null
+    if [ "$?" -gt 0 ]; then
+        sudo mkdir -p "$PROFILE_DIR"
+        if [ "$?" -gt 0 ]; then
+            echo "Couldn't create the profile directory '$PROFILE_DIR'. Exiting :("
+            exit 1
+        fi
+    fi
   fi
 else
-  if [ ! -d "$PROFILE_DIR" ]; then
+  while [ ! -d "$PROFILE_DIR" ]; do
     read -n 1 -p "Profile dir '$PROFILE_DIR' doesn't exist. Would you like to create it? [Y,n] " ANS
     if [ "$ANS" != 'N' -a "$ANS" != 'n' ]; then
       mkdir -p "$PROFILE_DIR"
@@ -139,7 +217,7 @@ else
       echo "Need a valid profile directory"
       exit 1
     fi
-  fi
+  done
 fi
 
 if [ "$PROFILE" == "" ]; then
@@ -171,13 +249,18 @@ CONFIG_DIR=`realpath "$CONFIG_DIR"`
 PROFILE_DIR=`realpath "$PROFILE_DIR"`
 SHARED_FILES=`realpath "$SHARED_FILES"`
 DONE_DIR=`realpath "$DONE_DIR"`
+USRVARS="$DONE_DIR/usr-vars.sh"
 
 export -f exit_on_fail
+export -f save_usrvar
+export -f is_array
+export -f dump_array_vals
 export CONFIG_DIR
 export PROFILE_DIR
 export PROFILE
 export SHARED_FILES
 export DONE_DIR
+export USRVARS
 
 
 

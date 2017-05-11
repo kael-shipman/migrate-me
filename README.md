@@ -12,6 +12,8 @@ To install, simply download the [migrate-me.sh](https://github.com/kael-shipman/
 
 If you'd like to easily keep up with updates, you can clone this git repo and symlink the `migrate-me.sh` into your PATH. Optionally, you can `git checkout [tag]` in your repo clone to use a specific version.
 
+Alternatively, you can use composer: `composer global require "kael-shipman/migrate-me ~2.2"` (though you might have to add it to your path, depending on how your Composer is set up).
+
 On first run, it will ask you if you want to create the config directory (you should choose yes, or choose no and specify a different config directory using the command line options detailed below).
 
 Also, you'll have to point it to your profiles. You can either put profiles into its default profile location (see below) or point it to your profile directory using the command line flag (see below).
@@ -65,4 +67,24 @@ This is another directory with little reason to be changed. It is expected to be
 For example, many profiles might use the same `vimrc` file. You can reference this from within your scripts by putting `$SHARED_FILES/vimrc`.
 
 There is no command-line option to override this.
+
+## API
+
+What I'm calling the "API" here is actually just a collection of pre-defined functions as variables that are available throughout the script.
+
+### Global Variables
+
+* **`$CONFIG_DIR`** -- The directory where configuration is stored (default: `/etc/migrate-me`)
+* **`$PROFILE_DIR`** -- The directory where your profiles are stored (default: `$CONFIG_DIR/profiles`)
+* **`$PROFILE`** -- The name of the profile currently in use (default: *passed from command line*)
+* **`$SHARED_FILES`** -- The directory where you can keep files that you share between profiles (default: `$PROFILE_DIR/shared-files`)
+* **`$DONE_DIR`** -- The directory where records of which files have been run are stored (default: `$CONFIG_DIR/done/$PROFILE`)
+* **`$USERVARS`** - The file where saved user variables are stored (default: `$DONE_DIR/usr-vars.sh`)
+
+### Global Functions
+
+* **`exit_on_fail(int exit_status, string fail_message)`** -- Exits, echoing the given message, if the first argument is greater than 0. For example, `exit_on_fail "$?" "Sorry, the command didn't end well"`
+* **`save_usrvar(var-pointer variable_to_store)`** -- Saves a variable defined from user input for usage next time the script is run. Example: `if [ "$MYVAR" == "" ]; then MYVAR='my val'; save_usrvar MYVAR; fi`
+* **`is_array(var-pointer variable_to_check)`** -- Checks to see if a given variable is an array.
+* **`dump_array_vals(var-pointer array_to_dump)`** -- Dumps the values of an array enclosed in quotes. (This exists for use in `save_usrvar`)
 
