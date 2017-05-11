@@ -2,9 +2,29 @@
 
 export SCRIPT_VER=2.2
 
+vers=`/bin/bash --version 2>/dev/null | sed -Ez 's/.*version ([4-9]).*/\1/'`
+if [ "$vers" -lt 4 ]; then
+    echo
+    echo "ERROR: This utility requires bash version 4 or greater. Tried to get version by"
+    echo "sedding output from /bin/bash --version."
+    echo
+    echo "Exiting :("
+    echo
+    exit 1
+fi
+
 #
 # Functions
 #
+
+function lecho {
+    logme "$1"
+    echo "$1"
+}
+
+function logme {
+    echo "$1" >> $LOGFILE
+}
 
 function exit_on_fail {
   if [[ ! "$1" =~ ^[0-9]+$ ]]; then
@@ -20,6 +40,7 @@ function exit_on_fail {
     echo 'NOTE: The `echo "$?"` part is crucial, as this returns the exit code of your command to the function, telling it whether or not the command was a success' &>2
     exit 2
   elif [ "$1" -gt 0 ]; then
+    logme "$2"
     echo "$2" >&2
     exit 1
   fi
@@ -101,6 +122,21 @@ function save_usrvar {
     fi
 }
 
+if command -v readlink >/dev/null 2>&1; then
+    if [ command -v realpath >/dev/null 2>&1; then
+        echo
+        echo "ERROR: No readlink or realpath binaries found! Migrate-me requires"
+        echo "one of these programs to resolve absolute URLs. Please figure out"
+        echo "how to install one (preferrably readlink). Exiting :(."
+        echo
+        exit 1
+    else
+        resolver='realpath'
+    fi
+else
+    resolver='readlink -f'
+fi
+
 
 
 
@@ -124,7 +160,7 @@ while test $# -gt 0; do
     -c|--config-dir)
       shift
       if test $# -gt 0; then
-        CONFIG_DIR=`realpath "$1"`
+        CONFIG_DIR=`$resolver "$1"`
         shift
       else
         echo "No config directory specified, even though -c or --config-dir parameter passed!"
@@ -135,7 +171,7 @@ while test $# -gt 0; do
     -p|--profile-dir)
       shift
       if test $# -gt 0; then
-        PROFILE_DIR=`realpath "$1"`
+        PROFILE_DIR=`$resolver "$1"`
         shift
       else
         echo "No profile directory specified, even though -p or --profile-dir parameter passed!"
@@ -175,7 +211,7 @@ done
 #
 
 if [ "$CONFIG_DIR" == "" ]; then
-  CONFIG_DIR=`realpath /etc/migrate-me`
+  CONFIG_DIR=`$resolver /etc/migrate-me`
 fi
 if [ "$PROFILE_DIR" == "" ]; then
   PROFILE_DIR="$CONFIG_DIR/profiles"
@@ -245,39 +281,43 @@ mkdir -p "$DONE_DIR"
 # Prepare and export variables so other scripts can use them
 #
 
-CONFIG_DIR=`realpath "$CONFIG_DIR"`
-PROFILE_DIR=`realpath "$PROFILE_DIR"`
-SHARED_FILES=`realpath "$SHARED_FILES"`
-DONE_DIR=`realpath "$DONE_DIR"`
+CONFIG_DIR=`$resolver "$CONFIG_DIR"`
+PROFILE_DIR=`$resolver "$PROFILE_DIR"`
+SHARED_FILES=`$resolver "$SHARED_FILES"`
+DONE_DIR=`$resolver "$DONE_DIR"`
 USRVARS="$DONE_DIR/usr-vars.sh"
+LOGFILE="$DONE_DIR/migrate-me.log"
 
 export -f exit_on_fail
 export -f save_usrvar
 export -f is_array
 export -f dump_array_vals
+export -f lecho
+export -f logme
 export CONFIG_DIR
 export PROFILE_DIR
 export PROFILE
 export SHARED_FILES
 export DONE_DIR
 export USRVARS
+export LOGFILE
 
 
 
 
-echo
-echo "**************************************************"
-echo "-- Welcome to the New System Migration console! --"
-echo "**************************************************"
-echo
-echo ":: Using profile '$PROFILE' ::"
-echo
+lecho ""
+lecho "**************************************************"
+lecho "-- Welcome to the New System Migration console! --"
+lecho "**************************************************"
+lecho ""
+lecho ":: Using profile '$PROFILE' ::"
+lecho ""
+lecho ""
 
 
 
 
 
-echo
 
 # Run all scripts for given profile
 
@@ -285,20 +325,20 @@ current_dir=`pwd`
 for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
   BASENM=`basename "$script"`
   if [ "$BASENM" == "00-prelims.sh" -o "$BASENM" == "99-cleanup.sh" -o ! -e "$DONE_DIR/$BASENM" ]; then
-    echo "Running $PROFILE/$BASENM...."
+    lecho "Running $PROFILE/$BASENM...."
     . "$script"
     cd "$current_dir"
-    echo "Done."
-    echo
+    lecho "Done."
+    lecho ""
     touch "$DONE_DIR/$BASENM"
   else
-    echo "Already ran $PROFILE/$BASENM. Proceeding to next script."
+    lecho "Already ran $PROFILE/$BASENM. Proceeding to next script."
   fi
 done
 
 
-echo
-echo 'All scripts have been run. System should be ready to go!'
-echo
+lecho ""
+lecho 'All scripts have been run. System should be ready to go!'
+lecho ""
 exit
 

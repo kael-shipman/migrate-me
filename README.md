@@ -79,7 +79,8 @@ What I'm calling the "API" here is actually just a collection of pre-defined fun
 * **`$PROFILE`** -- The name of the profile currently in use (default: *passed from command line*)
 * **`$SHARED_FILES`** -- The directory where you can keep files that you share between profiles (default: `$PROFILE_DIR/shared-files`)
 * **`$DONE_DIR`** -- The directory where records of which files have been run are stored (default: `$CONFIG_DIR/done/$PROFILE`)
-* **`$USERVARS`** - The file where saved user variables are stored (default: `$DONE_DIR/usr-vars.sh`)
+* **`$USERVARS`** -- The file where saved user variables are stored (default: `$DONE_DIR/usr-vars.sh`)
+* **`$LOGFILE`** -- The file where each run's logs are written. (default: `$DONE_DIR/migrate-me.log`)
 
 ### Global Functions
 
@@ -87,4 +88,6 @@ What I'm calling the "API" here is actually just a collection of pre-defined fun
 * **`save_usrvar(var-pointer variable_to_store)`** -- Saves a variable defined from user input for usage next time the script is run. Example: `if [ "$MYVAR" == "" ]; then MYVAR='my val'; save_usrvar MYVAR; fi`
 * **`is_array(var-pointer variable_to_check)`** -- Checks to see if a given variable is an array.
 * **`dump_array_vals(var-pointer array_to_dump)`** -- Dumps the values of an array enclosed in quotes. (This exists for use in `save_usrvar`)
+* **`lecho(string string_to_echo)`** -- Echos a string and also logs it to `$LOGFILE`.
+* **`logme(string string_to_log)`** -- Logs a string to `$LOGFILE`.
 
