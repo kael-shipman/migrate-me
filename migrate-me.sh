@@ -123,18 +123,18 @@ function save_usrvar {
 }
 
 if command -v readlink >/dev/null 2>&1; then
+    resolver='readlink -f'
+else
     if command -v realpath >/dev/null 2>&1; then
+        resolver='realpath'
+    else
         echo
         echo "ERROR: No readlink or realpath binaries found! Migrate-me requires"
         echo "one of these programs to resolve absolute URLs. Please figure out"
         echo "how to install one (preferrably readlink). Exiting :(."
         echo
         exit 1
-    else
-        resolver='realpath'
     fi
-else
-    resolver='readlink -f'
 fi
 
 
@@ -301,6 +301,7 @@ export SHARED_FILES
 export DONE_DIR
 export USRVARS
 export LOGFILE
+export resolver
 
 
 
@@ -324,7 +325,7 @@ lecho ""
 current_dir=`pwd`
 for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
   BASENM=`basename "$script"`
-  if [ "$BASENM" == *"-prelims.sh" -o "$BASENM" == *"-cleanup.sh" -o ! -e "$DONE_DIR/$BASENM" ]; then
+  if [[ "$BASENM" == *"-prelims.sh" ]] || [[ "$BASENM" == *"-cleanup.sh" ]] || [ ! -e "$DONE_DIR/$BASENM" ]; then
     lecho "Running $PROFILE/$BASENM...."
     . "$script"
     cd "$current_dir"
