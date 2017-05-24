@@ -6,6 +6,10 @@ Migrate Me is a simple utility designed to allow users to maintain potentially c
 
 Once each script finishes successfully, a file named after the script is stored in `$CONFIG_DIR/done/$PROFILE/`. On future runs, only scripts that are not recorded in this way will run, allowing the migration to pick up where it left off in case of errors.
 
+You can also force individual scripts to run on demand by passing them directly to the command. Script names should be relative to the profile directory, meaning they should _include_ the profile name in them. (This is because each script is executed in isolation in the context of its profile, so each script needs to indicate which profile it's associated with.)
+
+For example, suppose your profile directory is `~/migrate-me`, you have a profile called `home-pc` and in it a script called `05-user-setup.sh`. You can run `05-user-setup.sh` by calling `migrate-me.sh -p ~/migrate-me home-pc/05-user-setup.sh`. This will execute `05-user-setup.sh` in isolation, calling `*-prelims.sh` before, `*-cleanup.sh` after, and any `before` and `after` hooks set up for this script in the hooks directory.
+
 ## Installation
 
 To install, simply download the [migrate-me.sh](https://github.com/kael-shipman/migrate-me/raw/master/migrate-me.sh) file and place it in your `PATH`. 
@@ -24,9 +28,9 @@ The script is expected to be run with a specified profile, for example, `migrate
 
 The project has been created so that you can maintain a separate git repo of your profiles. See below for how to point the script to your profiles.
 
-### Special Hooks
+### Hooks
 
-There are two special setup and teardown "hook" scripts that are intended to before and after all other scripts, respectively. These are `00-prelims.sh` and `99-cleanup.sh`. You can include one, both, or neither -- it makes no difference. The `00-prelims.sh` script is useful for establishing configuration across all of the subsequent scripts. For example, you might create some functions and/or variables that all your scripts can access:
+There are two special setup and teardown hook scripts that are intended to run before and after all other scripts, respectively. These are `*-prelims.sh` and `*-cleanup.sh` (usually called `000-prelims.sh` and `999-cleanup.sh`, but you can freely change the number of zeros and nines before each). You can include one, both, or neither -- it makes no difference. The `*-prelims.sh` script is useful for establishing configuration across all of the subsequent scripts. For example, you might create some functions and/or variables that all your scripts can access:
 
 ```bash
 #!/bin/bash
@@ -36,7 +40,9 @@ export WEB_DIR="/srv/www"
 #...
 ```
 
-The `99-cleanup.sh` script is intended to do what it says, and probably won't be used much, since there probably won't be much to cleanup.
+The `*-cleanup.sh` script is intended to do what it says, and probably won't be used much, since there probably won't be much to cleanup.
+
+You can also add `before` and `after` hooks for each of your scripts in the `$PROFILE_DIR/$PROFILE/hooks` folder. Assuming you have a script called `05-user-setup.sh`, if there is a file called `hooks/before-05-user-setup.sh`, it will be run before the script, and if there is a file called `after-05-user-setup.sh` it will be called after. It's typical to exclude the `hooks` directory from version control.
 
 ## Default Folders and Options to Override Them
 

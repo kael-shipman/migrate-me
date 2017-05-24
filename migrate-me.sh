@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export SCRIPT_VER=2.2
+export SCRIPT_VER=2.3
 
 vers=`/bin/bash --version 2>/dev/null | sed -Ez 's/.*version ([4-9]).*/\1/'`
 if [ "$vers" -lt 4 ]; then
@@ -49,12 +49,18 @@ function exit_on_fail {
 function echo_usage {
   echo "$0 - migrate a system setup to a new system"
   echo
-  echo "$0 [options] profile"
+  echo "$0 [options] profile|script[ script....]"
   echo
   echo "Options:"
   echo "  -h, --help                      show this help"
   echo "  -p [dir], --profile-dir [dir]   set the directory in which to find profiles"
   echo "  -c [dir], --config-dir [dir]    set the directory in which to find migrate-me config"
+  echo
+  echo "If passing individual scripts, they should be relative to the profile directory (that is, the"
+  echo "scriptname passed should INCLUDE the profile directory). When running scripts, the \*-prelims.sh"
+  echo "file for each script profile (the directory preceding the actually script name) will be run"
+  echo "every time the script is run. As such, each script executes as an isolated unit between \*-prelims.sh"
+  echo "and \*-cleanup.sh"
   echo
   echo
 }
@@ -85,10 +91,6 @@ function save_usrvar {
         echo "You must supply a variable name for the first parameter of 'save_usrvar'!"
         exit 1
     fi
-    if [ "${!1}" == "" ]; then
-        echo "The variable you're saving with 'save_usrvar' must have a value!"
-        exit 1
-    fi
     if [ "$USRVARS" == "" ] || [ ! -d `dirname $USRVARS` ]; then
         echo
         echo "'USRVARS' is not set to a valid file! This is usually set in"
@@ -117,7 +119,7 @@ function save_usrvar {
             sed -i -E "s/^declare -a $1=.+$/declare -a $1=($repl)/" $USRVARS
         else
             repl=`echo ${!1} | sed -e 's/[]\\/$*.^|[]/\\\\&/g'`
-            sed -i -E "s/^$1=.+$/$1="'"'"$repl"'"'"/" $USRVARS
+            sed -i -E "s/^$1=.*$/$1="'"'"$repl"'"'"/" $USRVARS
         fi
     fi
 }
@@ -149,6 +151,7 @@ fi
 #
 # Get arguments
 #
+declare -a SCRIPTS
 
 while test $# -gt 0; do
   case $1 in
@@ -191,12 +194,7 @@ while test $# -gt 0; do
         echo_usage
         exit 1
       fi
-      if [ "$PROFILE" != "" ]; then
-        echo "You've passed two arguments that look like profiles. Please fix this. ('$PROFILE' and '$1')"
-        echo_usage
-        exit 1
-      fi
-      PROFILE=$1
+      SCRIPTS[${#SCRIPTS[@]}]=$1
       shift
       ;;
 
@@ -256,24 +254,33 @@ else
   done
 fi
 
-if [ "$PROFILE" == "" ]; then
+if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   if [ ! -d "$PROFILE_DIR/default" ]; then
     echo "You haven't provided a profile and there is no default profile available in '$PROFILE_DIR'. If you'd like to create a default profile, create a symlink or folder called 'default' under the profile directory '$PROFILE_DIR'."
+    echo_usage
     exit 1
   else
-    PROFILE=$(basename "`readlink -f "$PROFILE_DIR/default"`")
+    PROFILE=$(basename "`$resolver "$PROFILE_DIR/default"`")
+    SCRIPTS=''
     echo "Using default profile '$PROFILE'."
   fi
-else
-  if [ ! -d "$PROFILE_DIR/$PROFILE" ]; then
-    echo "Profile '$PROFILE' not found at '$PROFILE_DIR/$PROFILE'! please make sure it exists and try again."
-    exit 1
-  fi
+elif [ "${#SCRIPTS[@]}" -eq 1 ] && [ -d "$PROFILE_DIR/${SCRIPTS[0]}" ]; then
+  PROFILE="${SCRIPTS[0]}"
+  SCRIPTS=''
+fi
+
+if [ ! -z "$SCRIPTS" ]; then
+  for s in ${SCRIPTS[@]}; do
+    if [ ! -f "$PROFILE_DIR/$s" ]; then
+      echo "It looks like you're trying to execute specific scripts, but you've passed a filename ('$s') that either doesn't exist or isn't a script. Please try again."
+      echo_usage
+      exit 1
+    fi
+  done
 fi
 
 SHARED_FILES="$PROFILE_DIR/shared-files"
 DONE_DIR="$CONFIG_DIR/done/$PROFILE"
-mkdir -p "$DONE_DIR"
 
 
 
@@ -287,6 +294,7 @@ SHARED_FILES=`$resolver "$SHARED_FILES"`
 DONE_DIR=`$resolver "$DONE_DIR"`
 USRVARS="$DONE_DIR/usr-vars.sh"
 LOGFILE="$DONE_DIR/migrate-me.log"
+mkdir -p "$DONE_DIR"
 
 export -f exit_on_fail
 export -f save_usrvar
@@ -305,41 +313,102 @@ export resolver
 
 
 
-
-lecho ""
-lecho "**************************************************"
-lecho "-- Welcome to the New System Migration console! --"
-lecho "**************************************************"
-lecho ""
-lecho ":: Using profile '$PROFILE' ::"
-lecho ""
-lecho ""
-
-
-
-
-
-
-# Run all scripts for given profile
-
 current_dir=`pwd`
-for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
-  BASENM=`basename "$script"`
-  if [[ "$BASENM" == *"-prelims.sh" ]] || [[ "$BASENM" == *"-cleanup.sh" ]] || [ ! -e "$DONE_DIR/$BASENM" ]; then
+if [ ! -z "$PROFILE" ]; then
+
+  lecho ""
+  lecho "**************************************************"
+  lecho "-- Welcome to the New System Migration console! --"
+  lecho "**************************************************"
+  lecho ""
+  lecho ":: Using profile '$PROFILE' ::"
+  lecho ""
+  lecho ""
+  
+  # Run all scripts for given profile
+  
+  for script in "$PROFILE_DIR/$PROFILE/"*.sh ; do
+    BASENM=`basename "$script"`
+    if [[ "$BASENM" == *"-prelims.sh" ]] || [[ "$BASENM" == *"-cleanup.sh" ]] || [ ! -e "$DONE_DIR/$BASENM" ]; then
+      lecho "Running $PROFILE/$BASENM...."
+      if [ -e "$PROFILE_DIR/$PROFILE/hooks/before-$BASENM" ]; then
+          lecho "Before hook found! Running..."
+          . "$PROFILE_DIR/$PROFILE/hooks/before-$BASENM"
+          lecho "Done with before hook"
+      fi
+  
+      . "$script"
+      cd "$current_dir"
+  
+      if [ -e "$PROFILE_DIR/$PROFILE/hooks/after-$BASENM" ]; then
+          lecho "After hook found! Running..."
+          . "$PROFILE_DIR/$PROFILE/hooks/after-$BASENM"
+          lecho "Done with after hook"
+      fi
+      lecho "Done with $script."
+      lecho ""
+      touch "$DONE_DIR/$BASENM"
+    else
+      lecho "Already ran $PROFILE/$BASENM. Proceeding to next script."
+    fi
+  done
+  
+  
+  lecho ""
+  lecho 'All scripts have been run. System should be ready to go!'
+  lecho ""
+  exit
+
+else
+  
+  lecho
+  lecho
+  lecho "**********************************************"
+  lecho "--         Welcome to Migrate Me            --"
+  lecho "**********************************************"
+  lecho
+  lecho ":: Running individual scripts ::"
+  lecho
+  lecho
+
+  dd="$DONE_DIR"
+  for script in ${SCRIPTS[@]}; do
+    PROFILE=`dirname "$script"`
+    DONE_DIR=`$resolver "$DONE_DIR/$PROFILE"`
+    mkdir -p "$DONE_DIR"
+    USRVARS="$DONE_DIR/usr-vars.sh"
+    LOGFILE="$DONE_DIR/migrate-me.log"
+    BASENM=`basename "$script"`
+
+    # Run prelims
+    if [ -e "$PROFILE_DIR/$PROFILE/"*-prelims.sh ]; then
+        . "`$resolver "$PROFILE_DIR/$PROFILE/"*-prelims.sh`"
+    fi
+
     lecho "Running $PROFILE/$BASENM...."
+
+    if [ -e "$PROFILE_DIR/$PROFILE/hooks/before-$BASENM" ]; then
+        lecho "Before hook found! Running..."
+        . "$PROFILE_DIR/$PROFILE/hooks/before-$BASENM"
+        lecho "Done with before hook"
+    fi
+
     . "$script"
     cd "$current_dir"
-    lecho "Done."
-    lecho ""
-    touch "$DONE_DIR/$BASENM"
-  else
-    lecho "Already ran $PROFILE/$BASENM. Proceeding to next script."
-  fi
-done
 
+    if [ -e "$PROFILE_DIR/$PROFILE/hooks/after-$BASENM" ]; then
+        lecho "After hook found! Running..."
+        . "$PROFILE_DIR/$PROFILE/hooks/after-$BASENM"
+        lecho "Done with after hook"
+    fi
+    lecho "Done with $script."
+    lecho 
 
-lecho ""
-lecho 'All scripts have been run. System should be ready to go!'
-lecho ""
-exit
+    # Run cleanup
+    if [ -e "$PROFILE_DIR/$PROFILE/"*-cleanup.sh ]; then
+        . "`$resolver "$PROFILE_DIR/$PROFILE/"*-cleanup.sh`"
+    fi
+  done
+fi
+
 
