@@ -209,7 +209,7 @@ done
 #
 
 if [ "$CONFIG_DIR" == "" ]; then
-  CONFIG_DIR=`$resolver /etc/migrate-me`
+  CONFIG_DIR="/etc/migrate-me"
 fi
 if [ "$PROFILE_DIR" == "" ]; then
   PROFILE_DIR="$CONFIG_DIR/profiles"
@@ -279,19 +279,15 @@ if [ ! -z "$SCRIPTS" ]; then
   done
 fi
 
-SHARED_FILES="$PROFILE_DIR/shared-files"
-DONE_DIR="$CONFIG_DIR/done/$PROFILE"
-
 
 
 #
 # Prepare and export variables so other scripts can use them
 #
 
-CONFIG_DIR=`$resolver "$CONFIG_DIR"`
-PROFILE_DIR=`$resolver "$PROFILE_DIR"`
-SHARED_FILES=`$resolver "$SHARED_FILES"`
-DONE_DIR=`$resolver "$DONE_DIR"`
+
+SHARED_FILES="$PROFILE_DIR/shared-files"
+DONE_DIR="$CONFIG_DIR/done/$PROFILE"
 USRVARS="$DONE_DIR/usr-vars.sh"
 LOGFILE="$DONE_DIR/migrate-me.log"
 mkdir -p "$DONE_DIR"
